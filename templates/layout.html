@@ -36,6 +36,9 @@
                         <a class="nav-link active" href="/buy">Buy</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link active" href="/cart">Cart</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link active" href="/contact">Contact Us</a>
                     </li>
                 </ul>
@@ -49,7 +52,11 @@
             </div>
         </div>
     </nav>
-    
+
+    <alert class="container-fluid text-center g-0"> 
+    {% block alert %}{% endblock %}
+    </alert>
+
     <main class="container-fluid py-5 text-center">
         
         {% block main %}{% endblock %}
