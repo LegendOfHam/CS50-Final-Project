@@ -14,10 +14,13 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 # Configure database
 db = SQL("sqlite:///tantalicious.db")
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
-    if request.method == "POST":
-        return render_template("index.html")
-    else:
-        return render_template("index.html")
+        return render_template("login.html")   
 
+@app.route("/register", methods=["GET"])
+def register():
+    if request.method == "POST":
+        print("todo")
+    else:
+        return render_template("register.html")
