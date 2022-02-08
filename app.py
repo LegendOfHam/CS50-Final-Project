@@ -20,10 +20,13 @@ Session(app)
 # Configure database
 db = SQL("sqlite:///tantalicious.db")
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 @login_required
 def index():
-    return render_template("index.html")       
+    if request.method == "POST":
+        pass
+    else:
+        return render_template("index.html")       
 
 @app.route("/alert", methods=["GET"])
 def alert():
@@ -91,7 +94,9 @@ def login():
 
         # Remember which user has logged in
         session["user_id"] = rows[0]["id"]
-
+        username = rows[0]["username"]
+        
+        flash(f"Welcome, {username}!","success")
         return redirect("/")
     else:
         if session.get("user_id"):
