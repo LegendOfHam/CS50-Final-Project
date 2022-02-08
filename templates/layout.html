@@ -49,12 +49,33 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="/register">Register</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/logout">Log Out</a>
+                    </li>
             </div>
         </div>
     </nav>
 
     <alert class="container-fluid text-center g-0"> 
-    {% block alert %}{% endblock %}
+        {% with errors = get_flashed_messages(category_filter=["error"]) %}
+        {% with successes = get_flashed_messages(category_filter=["success"]) %}
+            {% if errors %}
+                {% for message in errors %}
+                    <div class="alert alert-warning alert-dismissible">
+                        {{ message }} Believe this to be a problem? Contact us <a href="/contact" class="alert-link">here</a>.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% elif successes %}
+                {% for message in successes %}
+                    <div class="alert alert-success alert-dismissible">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% endwith %}
     </alert>
 
     <main class="container-fluid py-5 text-center">

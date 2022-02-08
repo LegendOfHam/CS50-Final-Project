@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    ALERT
+{% endblock %}
+
+{% block alert %}
+    {% for message in get_flashed_messages() %}
+        <div class="alert alert-warning" role="alert">
+        {{ message }} 
+        Return to homepage <a href="/" class="alert-link">here</a>.
+         </div>
+    {% endfor %}
+{% endblock %}
