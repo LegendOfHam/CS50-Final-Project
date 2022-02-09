@@ -7,18 +7,19 @@
 {% block main %}
     <form action="/" method="post">
         <div class="mb-3">
-            <select name="item" id="item" class="form-select mx-auto w-25" aria-label="Food Item">
+            <select name="stock" id="stock" class="form-select mx-auto w-25" aria-label="Food Item">
                 <option selected>Food Item</option>
-                {% for item in items %}
-                <option value={{ sym["symbol"] }}>{{ sym["symbol"] }}</option>
+                {% for stock in stocks %}
+                <option value="{{ stock["product"] }}">{{ stock["product"] }}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="mb-3">
-            <input autocomplete="off" autofocus class="form-control mx-auto w-25" id="shares" name="shares" placeholder="Number of Shares" type="text">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-25" id="quantity" name="quantity" placeholder="Quantity" type="text">
         </div>
-        <button class="btn btn-primary" type="submit">Sell!</button>
+        <button class="btn btn-primary" type="submit">Add To Cart</button>
     </form>
+    <hr>
 
     <div class="container mt-3  ">
         <div class="row g-3 gy-3 text-center">

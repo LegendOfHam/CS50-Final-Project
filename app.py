@@ -24,9 +24,21 @@ db = SQL("sqlite:///tantalicious.db")
 @login_required
 def index():
     if request.method == "POST":
-        pass
+        stock = request.form.get("stock")
+        try:
+            quantity = int(request.form.get("quantity"))
+        except:
+            flash("Please fill in an integer for quantity!", "error")
+            return redirect("/")
+
+        instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock)[0]["instock"]
+        if quantity > instock:
+            flash(f"As we currently only have {instock} of {stock} left in-store, there might be delivery delays.", "error")
+        
+        return redirect("/")
     else:
-        return render_template("index.html")       
+        stocks = db.execute("SELECT product FROM stocks")
+        return render_template("index.html", stocks=stocks)       
 
 @app.route("/alert", methods=["GET"])
 def alert():
