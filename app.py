@@ -142,17 +142,65 @@ def logout():
 @login_required
 def cart():
     if request.method == "POST":
-        pass
+        # Implementing a delete mechanism
+        delete = request.form.get("unwanted")
+        id = session["user_id"]
+        db.execute("DELETE FROM cart WHERE user_id = ? AND product = ?", id, delete)
+        flash("Successfully deleted!", "success")
+        return redirect("/cart")
     else:
-        cart = [] 
-        cart["product"] = db.execute("SELECT product FROM cart ORDER BY product")
-        cart["quantity"] = db.execute("SELECT product FROM cart ORDER BY product")
-        cart["uprice"] = 
-        cart["tprice"] = 
+        id = session["user_id"]
+        cart = []
+        total = 0
+        orders = db.execute("SELECT * FROM cart WHERE user_id = ?", id)
+        for i in range(len(orders)):
+            temp = {} 
+            temp["product"] = db.execute("SELECT product FROM cart WHERE user_id = ?", id)[i]["product"]
+            temp["quantity"] = db.execute("SELECT quantity FROM cart where product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
+            temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+            temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+            cart.append(temp)
+
+        for j in range(len(orders)):
+            total += cart[j]["tprice"]
+
+        return render_template("cart.html", cart=cart, total=total)
+
+
+@app.route("/purchases", methods=["GET", "POST"])
+@login_required
+def purchases():
+    if request.method == "POST":
+        id = session["user_id"]
+        stock = db.execute("SELECT product, quantity FROM cart WHERE user_id = ?", id)
+        for i in range(len(stock)):
+            # Update orders db
+            db.execute("INSERT INTO orders (user_id, product, quantity) VALUES (?, ?, ?)", id, stock[i]["product"], stock[i]["quantity"])
+            
+            # Update stocks db
+            og_sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock[i]["product"])[0]["sold"]
+            og_instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock[i]["product"])[0]["instock"]
+            db.execute("UPDATE stocks SET sold = ?, instock = ? WHERE product = ?", og_sold + stock[i]["quantity"], og_instock - stock[i]["quantity"], stock[i]["product"])
         
-        return render_template("cart.html", cart=cart)
-        # db.execute("INSERT INTO orders (user_id, product, quantity) VALUES (?, ?, ?)", id, stock, quantity)
-        # db.execute("UPDATE stocks SET sold = ?, instock = ? WHERE product = ?", sold + 1, instock - 1, stock)
-# Index page
-# Buy page
-# Cart page
+            # Empty cart db
+            db.execute("DELETE FROM cart") 
+
+        flash("Successful purchase!", "success")
+        return redirect("/purchases")
+    else:
+        id = session["user_id"]
+        purchases = []
+        total = 0
+        orders = db.execute("SELECT * FROM orders WHERE user_id = ?", id)
+        for i in range(len(orders)):
+            temp = {} 
+            temp["product"] = db.execute("SELECT product FROM orders WHERE user_id = ?", id)[i]["product"]
+            temp["quantity"] = db.execute("SELECT quantity FROM orders WHERE product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
+            temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+            temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+            purchases.append(temp)
+
+        for j in range(len(orders)):
+            total += purchases[j]["tprice"]
+
+        return render_template("purchases.html", purchases=purchases, total=total)
