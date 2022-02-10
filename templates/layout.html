@@ -61,12 +61,13 @@
         {% with successes = get_flashed_messages(category_filter=["success"]) %}
             {% if errors %}
                 {% for message in errors %}
-                    <div class="alert alert-warning alert-dismissible">
+                    <div class="alert alert-warning alert-dismissible mb-0">
                         {{ message }} Believe this to be a problem? Contact us <a href="/contact" class="alert-link">here</a>.
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
-            {% elif successes %}
+            {% endif %}
+            {% if successes %}
                 {% for message in successes %}
                     <div class="alert alert-success alert-dismissible">
                         {{ message }}

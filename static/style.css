@@ -1,3 +1,8 @@
 .nav-link {
     font-size: larger;
 }
+
+.food {
+    max-width: 100%;
+    max-height: 100%;
+}

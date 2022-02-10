@@ -24,6 +24,7 @@ db = SQL("sqlite:///tantalicious.db")
 @login_required
 def index():
     if request.method == "POST":
+        id = session["user_id"]
         stock = request.form.get("stock")
         try:
             quantity = int(request.form.get("quantity"))
@@ -31,10 +32,23 @@ def index():
             flash("Please fill in an integer for quantity!", "error")
             return redirect("/")
 
+        # Get necessary values from databases
+        sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock)[0]["sold"]
         instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock)[0]["instock"]
+        
+        # Testing if they are buying more than we currently have
         if quantity > instock:
             flash(f"As we currently only have {instock} of {stock} left in-store, there might be delivery delays.", "error")
         
+        # Update databases
+        rows = db.execute("SELECT quantity FROM cart WHERE product = ?", stock)
+        if len(rows) == 0:
+            db.execute("INSERT INTO cart (user_id, product, quantity) VALUES (?, ?, ?)", id, stock, quantity)
+        else:
+            initial_quantity = rows[0]["quantity"]
+            db.execute("UPDATE cart SET quantity = ? WHERE product = ?", initial_quantity + quantity, stock)
+        
+        flash("Successfully added to cart!", "success")
         return redirect("/")
     else:
         stocks = db.execute("SELECT product FROM stocks")
@@ -124,6 +138,21 @@ def logout():
     # Redirect user to login form
     return redirect("/")
 
+@app.route("/cart", methods=["GET", "POST"])
+@login_required
+def cart():
+    if request.method == "POST":
+        pass
+    else:
+        cart = [] 
+        cart["product"] = db.execute("SELECT product FROM cart ORDER BY product")
+        cart["quantity"] = db.execute("SELECT product FROM cart ORDER BY product")
+        cart["uprice"] = 
+        cart["tprice"] = 
+        
+        return render_template("cart.html", cart=cart)
+        # db.execute("INSERT INTO orders (user_id, product, quantity) VALUES (?, ?, ?)", id, stock, quantity)
+        # db.execute("UPDATE stocks SET sold = ?, instock = ? WHERE product = ?", sold + 1, instock - 1, stock)
 # Index page
 # Buy page
 # Cart page
