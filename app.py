@@ -72,6 +72,11 @@ def register():
             flash("Username already taken!", "error")
             return redirect("/register")
         
+        # Ensure username is unique
+        if not request.form.get("deets"):
+            flash("Please provide us with a way to contact you!", "error")
+            return redirect("/register")
+        
         # Ensure password is filled/confirmed
         if not request.form.get("password"):
             flash("Please fill in your password!", "error")
@@ -85,13 +90,18 @@ def register():
 
         new_user = request.form.get("username")
         new_hashpass = generate_password_hash(request.form.get("password"))
+        new_contact = request.form.get("deets")
 
-        db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", new_user, new_hashpass)
+        db.execute("INSERT INTO users (username, hash, contact) VALUES (?, ?, ?)", new_user, new_hashpass, new_contact)
         flash("Successfully registered!", "success")
         return redirect("/login")
 
     else:
-        return render_template("register.html")
+        if session.get("user_id"):
+            flash("Already registered!", "success")
+            return redirect("/")
+        else: 
+            return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -126,6 +136,7 @@ def login():
         return redirect("/")
     else:
         if session.get("user_id"):
+            flash("Already logged in!", "success")
             return redirect("/")
         else: 
             return render_template("login.html")
@@ -136,6 +147,7 @@ def logout():
     session.clear()
 
     # Redirect user to login form
+    flash("Successfully logged out! See you again!", "success")
     return redirect("/")
 
 @app.route("/cart", methods=["GET", "POST"])
@@ -150,21 +162,39 @@ def cart():
         return redirect("/cart")
     else:
         id = session["user_id"]
-        cart = []
-        total = 0
-        orders = db.execute("SELECT * FROM cart WHERE user_id = ?", id)
-        for i in range(len(orders)):
-            temp = {} 
-            temp["product"] = db.execute("SELECT product FROM cart WHERE user_id = ?", id)[i]["product"]
-            temp["quantity"] = db.execute("SELECT quantity FROM cart where product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
-            temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
-            temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
-            cart.append(temp)
+        if id == 1:
+            cart = []
+            total = 0
+            orders = db.execute("SELECT * FROM cart")
+            for i in range(len(orders)):
+                temp = {} 
+                temp["user_id"] = db.execute("SELECT user_id FROM cart")[i]["user_id"]
+                temp["product"] = db.execute("SELECT product FROM cart")[i]["product"]
+                temp["quantity"] = db.execute("SELECT quantity FROM cart where product = ?", temp["product"])[0]["quantity"]
+                temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+                temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+                cart.append(temp)
 
-        for j in range(len(orders)):
-            total += cart[j]["tprice"]
+            for j in range(len(orders)):
+                total += cart[j]["tprice"]
 
-        return render_template("cart.html", cart=cart, total=total)
+            return render_template("admincart.html", cart=cart, total=total)
+        else:
+            cart = []
+            total = 0
+            orders = db.execute("SELECT * FROM cart WHERE user_id = ?", id)
+            for i in range(len(orders)):
+                temp = {} 
+                temp["product"] = db.execute("SELECT product FROM cart WHERE user_id = ?", id)[i]["product"]
+                temp["quantity"] = db.execute("SELECT quantity FROM cart where product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
+                temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+                temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+                cart.append(temp)
+
+            for j in range(len(orders)):
+                total += cart[j]["tprice"]
+
+            return render_template("cart.html", cart=cart, total=total)
 
 
 @app.route("/purchases", methods=["GET", "POST"])
@@ -172,35 +202,111 @@ def cart():
 def purchases():
     if request.method == "POST":
         id = session["user_id"]
-        stock = db.execute("SELECT product, quantity FROM cart WHERE user_id = ?", id)
-        for i in range(len(stock)):
-            # Update orders db
-            db.execute("INSERT INTO orders (user_id, product, quantity) VALUES (?, ?, ?)", id, stock[i]["product"], stock[i]["quantity"])
+        if id == 1:
+            return redirect("/purchases")
+        else:
+            stock = db.execute("SELECT product, quantity FROM cart WHERE user_id = ?", id)
+            for i in range(len(stock)):
+                # Update orders db
+                db.execute("INSERT INTO orders (user_id, product, quantity) VALUES (?, ?, ?)", id, stock[i]["product"], stock[i]["quantity"])
+                
+                # Update stocks db
+                og_sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock[i]["product"])[0]["sold"]
+                og_instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock[i]["product"])[0]["instock"]
+                db.execute("UPDATE stocks SET sold = ?, instock = ? WHERE product = ?", og_sold + stock[i]["quantity"], og_instock - stock[i]["quantity"], stock[i]["product"])
             
-            # Update stocks db
-            og_sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock[i]["product"])[0]["sold"]
-            og_instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock[i]["product"])[0]["instock"]
-            db.execute("UPDATE stocks SET sold = ?, instock = ? WHERE product = ?", og_sold + stock[i]["quantity"], og_instock - stock[i]["quantity"], stock[i]["product"])
-        
-            # Empty cart db
-            db.execute("DELETE FROM cart") 
+                # Empty cart db
+                db.execute("DELETE FROM cart WHERE user_id = ?", id) 
 
-        flash("Successful purchase!", "success")
-        return redirect("/purchases")
+            flash("Successful purchase!", "success")
+            return redirect("/purchases")
     else:
         id = session["user_id"]
-        purchases = []
-        total = 0
-        orders = db.execute("SELECT * FROM orders WHERE user_id = ?", id)
-        for i in range(len(orders)):
-            temp = {} 
-            temp["product"] = db.execute("SELECT product FROM orders WHERE user_id = ?", id)[i]["product"]
-            temp["quantity"] = db.execute("SELECT quantity FROM orders WHERE product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
-            temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
-            temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
-            purchases.append(temp)
+        if id == 1:
+            purchases = []
+            total = 0
+            orders = db.execute("SELECT * FROM orders")
+            for i in range(len(orders)):
+                temp = {}
+                temp["user_id"] = db.execute("SELECT user_id FROM orders")[i]["user_id"] 
+                temp["product"] = db.execute("SELECT product FROM orders")[i]["product"]
+                temp["quantity"] = db.execute("SELECT quantity FROM orders WHERE product = ?", temp["product"])[0]["quantity"]
+                temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+                temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+                purchases.append(temp)
 
-        for j in range(len(orders)):
-            total += purchases[j]["tprice"]
+            for j in range(len(orders)):
+                total += purchases[j]["tprice"]
 
-        return render_template("purchases.html", purchases=purchases, total=total)
+            return render_template("adminpurchases.html", purchases=purchases, total=total)
+        else:
+            purchases = []
+            total = 0
+            orders = db.execute("SELECT * FROM orders WHERE user_id = ?", id)
+            for i in range(len(orders)):
+                temp = {} 
+                temp["product"] = db.execute("SELECT product FROM orders WHERE user_id = ?", id)[i]["product"]
+                temp["quantity"] = db.execute("SELECT quantity FROM orders WHERE product = ? AND user_id = ?", temp["product"], id)[0]["quantity"]
+                temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
+                temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
+                purchases.append(temp)
+
+            for j in range(len(orders)):
+                total += purchases[j]["tprice"]
+
+            return render_template("purchases.html", purchases=purchases, total=total)
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    if request.method == "POST":
+        pass
+    else:
+        return render_template("contact.html")
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    if request.method == "POST":
+        id = session["user_id"]
+        new_user = request.form.get("cusername")
+        old_password = request.form.get("opassword")
+        new_password = request.form.get("cpassword")
+        new_confirmation = request.form.get("cconfirmation")
+        new_contact = request.form.get("cdeets")
+
+        # Check and update password
+        if new_password:
+            if new_password != new_confirmation:
+                flash("Passwords do not match!", "error")
+                return redirect("/profile")
+            real_old_hash = db.execute("SELECT hash FROM users WHERE id = ?", id)[0]["hash"]
+            if not check_password_hash(real_old_hash, old_password):
+                flash("Old password does not match!", "error")
+                return redirect("/profile")
+            new_hash = generate_password_hash(new_password)
+            db.execute("UPDATE users SET hash = ? WHERE id = ?", new_hash, id)
+            flash("Password successfully updated!", "success")
+            return redirect("/profile")
+
+        if new_user:
+            db.execute("UPDATE users SET username = ? WHERE id = ?", new_user, id)
+            flash("Username successfully updated!", "success")
+            return redirect("/profile")
+        
+        if new_contact:
+            db.execute("UPDATE users SET contact = ? WHERE id = ?", new_contact, id)
+            flash("Contact successfully updated!", "success")
+            return redirect("/profile")
+
+        
+    else:
+        id = session["user_id"]
+        if id == 1:
+            user = db.execute("SELECT * FROM users WHERE id = ?", id)[0]
+            others = db.execute("SELECT * FROM users")
+            return render_template("adminprofile.html", user=user, others=others)
+        else:
+            user = db.execute("SELECT * FROM users WHERE id = ?", id)[0]
+            return render_template("profile.html", user=user)
+
+
