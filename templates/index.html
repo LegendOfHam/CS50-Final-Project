@@ -24,50 +24,15 @@
     
     <h1>Catalogue:</h1>
     <div class="container">
-        <div class="row g-3 gy-3 text-center">
+        <div class="row g-4 gy-3 text-center">
+        {% for stock in stocks %}
         <div class="col-4">
             <div class="p-3 border bg-light">
-            N.y. Siok Prawn Keropok (pre-fried) 500g
+            {{ stock["product"] }}
+            <p>{{ stock["price"] }} </p>
             <hr>
-            <img class="food" src="/static/images/nysiok.jpg">
+            <img class="food" src="{{ stock["image"] }}">
             </div>
         </div>
-        <div class="col-4">
-            <div class="p-3 border bg-light">
-            KUS Prawn Keropok (ready-to-eat) 150g/300g
-            <hr>
-            <img class="food" src="/static/images/kusprawn.jpg">
-            </div>
-        </div>
-        <div class="col-4">
-            <div class="p-3 border bg-light">
-            Fishball Crackers 200g
-            <hr>
-            <img class="food" src="/static/images/fishball.jpg">
-            </div>
-        </div>
-        <div class="col-4">
-            <div class="p-3 border bg-light">
-            Matahari Peanut (Garlic/Original) 250g
-            <hr>
-            <img class="food" src="/static/images/matahari.jpg">
-            </div>
-        </div>
-        <div class="col-4">
-            <div class="p-3 border bg-light">
-            Kacang Kapri Tari Bali Garlic Peanuts 300g
-            <hr>
-            <img class="food" src="/static/images/kapri.jpg">
-            </div>
-        </div>
-        <div class="col-4">
-            <div class="p-3 border bg-light">
-            Emping Belinjo Chilli 150g
-            <hr>
-            <img class="food" src="/static/images/emping.jpg">
-            </div>
-        </div>
-        </div>
-    </div>
-
+        {% endfor %}
 {% endblock %}

@@ -25,34 +25,73 @@ db = SQL("sqlite:///tantalicious.db")
 def index():
     if request.method == "POST":
         id = session["user_id"]
-        stock = request.form.get("stock")
-        try:
-            quantity = int(request.form.get("quantity"))
-        except:
-            flash("Please fill in an integer for quantity!", "error")
+        if id == 1:
+            old_name = request.form.get("stock")
+            new_name = request.form.get("name")
+            new_cost = request.form.get("cost")
+            new_price = request.form.get("price")
+            add_instock = request.form.get("instock")
+            new_image = request.form.get("image")
+
+            print(old_name)
+
+            if old_name == "Food Item":
+                flash("Select what you wish to change!", "error")
+                return redirect("/")
+            
+            if new_cost:
+                db.execute("UPDATE stocks SET cost = ? WHERE product = ?", new_cost, old_name)
+                flash("Updated cost!", "success")
+            if new_price:
+                db.execute("UPDATE stocks SET price = ? WHERE product = ?", new_price, old_name)
+                flash("Updated price!", "success")
+            if add_instock:
+                old_instock = db.execute("SELECT instock FROM stocks WHERE product = ?", old_name)
+                db.execute("UPDATE stocks SET instock = ? WHERE product = ?", old_instock + add_instock, old_name)
+                flash("Updated instock!", "success")
+            if new_image:
+                db.execute("UPDATE stocks SET image = ? WHERE product = ?", new_image, old_name)
+                flash("Updated image link!", "success")
+            if new_name:
+                db.execute("UPDATE stocks SET product = ? WHERE product = ?", new_name, old_name)
+                flash("Updated name!", "success")     
+            
             return redirect("/")
 
-        # Get necessary values from databases
-        sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock)[0]["sold"]
-        instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock)[0]["instock"]
-        
-        # Testing if they are buying more than we currently have
-        if quantity > instock:
-            flash(f"As we currently only have {instock} of {stock} left in-store, there might be delivery delays.", "error")
-        
-        # Update databases
-        rows = db.execute("SELECT quantity FROM cart WHERE product = ?", stock)
-        if len(rows) == 0:
-            db.execute("INSERT INTO cart (user_id, product, quantity) VALUES (?, ?, ?)", id, stock, quantity)
-        else:
-            initial_quantity = rows[0]["quantity"]
-            db.execute("UPDATE cart SET quantity = ? WHERE product = ?", initial_quantity + quantity, stock)
-        
-        flash("Successfully added to cart!", "success")
-        return redirect("/")
+        else: 
+            stock = request.form.get("stock")
+            try:
+                quantity = int(request.form.get("quantity"))
+            except:
+                flash("Please fill in an integer for quantity!", "error")
+                return redirect("/")
+
+            # Get necessary values from databases
+            sold = db.execute("SELECT sold FROM stocks WHERE product = ?", stock)[0]["sold"]
+            instock = db.execute("SELECT instock FROM stocks WHERE product = ?", stock)[0]["instock"]
+            
+            # Testing if they are buying more than we currently have
+            if quantity > instock:
+                flash(f"As we currently only have {instock} of {stock} left in-store, there might be delivery delays.", "error")
+            
+            # Update databases
+            rows = db.execute("SELECT quantity FROM cart WHERE product = ?", stock)
+            if len(rows) == 0:
+                db.execute("INSERT INTO cart (user_id, product, quantity) VALUES (?, ?, ?)", id, stock, quantity)
+            else:
+                initial_quantity = rows[0]["quantity"]
+                db.execute("UPDATE cart SET quantity = ? WHERE product = ?", initial_quantity + quantity, stock)
+            
+            flash("Successfully added to cart!", "success")
+            return redirect("/")
     else:
-        stocks = db.execute("SELECT product FROM stocks")
-        return render_template("index.html", stocks=stocks)       
+        id = session["user_id"]
+        if id == 1:
+            stocks = db.execute("SELECT product, price, image FROM stocks")
+            return render_template("adminindex.html", stocks=stocks)
+        else:
+            stocks = db.execute("SELECT product, price, image FROM stocks")
+            return render_template("index.html", stocks=stocks)       
 
 @app.route("/alert", methods=["GET"])
 def alert():
@@ -225,12 +264,13 @@ def purchases():
         if id == 1:
             purchases = []
             total = 0
-            orders = db.execute("SELECT * FROM orders")
+            orders = db.execute("SELECT *, SUM(QUANTITY) AS sum FROM orders GROUP BY user_id, product")
             for i in range(len(orders)):
                 temp = {}
-                temp["user_id"] = db.execute("SELECT user_id FROM orders")[i]["user_id"] 
-                temp["product"] = db.execute("SELECT product FROM orders")[i]["product"]
-                temp["quantity"] = db.execute("SELECT quantity FROM orders WHERE product = ?", temp["product"])[0]["quantity"]
+                temp["user_id"] = db.execute("SELECT user_id FROM orders GROUP BY user_id, product")[i]["user_id"]
+                temp["product"] = db.execute("SELECT product FROM orders GROUP BY user_id, product")[i]["product"]
+                temp["time"] = db.execute("SELECT time FROM orders WHERE product = ? AND user_id = ? GROUP BY user_id, product", temp["product"], temp["user_id"])[0]["time"]
+                temp["quantity"] = db.execute("SELECT SUM(QUANTITY) AS sum FROM orders WHERE product = ? AND user_id = ? GROUP BY user_id, product", temp["product"], temp["user_id"])[0]["sum"]
                 temp["uprice"] = db.execute("SELECT price FROM stocks WHERE product = ?", temp["product"])[0]["price"]
                 temp["tprice"] = round(temp["quantity"] * temp["uprice"], 2)
                 purchases.append(temp)
