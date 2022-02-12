@@ -93,10 +93,6 @@ def index():
             stocks = db.execute("SELECT product, price, image FROM stocks")
             return render_template("index.html", stocks=stocks)       
 
-@app.route("/alert", methods=["GET"])
-def alert():
-    return render_template("alert.html")
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -326,17 +322,16 @@ def profile():
             new_hash = generate_password_hash(new_password)
             db.execute("UPDATE users SET hash = ? WHERE id = ?", new_hash, id)
             flash("Password successfully updated!", "success")
-            return redirect("/profile")
 
         if new_user:
             db.execute("UPDATE users SET username = ? WHERE id = ?", new_user, id)
             flash("Username successfully updated!", "success")
-            return redirect("/profile")
         
         if new_contact:
             db.execute("UPDATE users SET contact = ? WHERE id = ?", new_contact, id)
             flash("Contact successfully updated!", "success")
-            return redirect("/profile")
+        
+        return redirect("/profile")
 
         
     else:
